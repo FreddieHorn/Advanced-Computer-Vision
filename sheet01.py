@@ -15,22 +15,46 @@ def read_data_reg(filename):
 #takes features with bias X (num_samples*(1+num_features)) and target values Y (num_samples*target_dims)
 #returns regression coefficients w ((1+num_features)*target_dims)
 def lin_reg(X, Y):
+    return np.dot(np.transpose(np.dot(inv(np.dot(X,np.transpose(X))),X)), Y)
+    
 
 #takes features with bias X (num_samples*(1+num_features)), target Y (num_samples*target_dims) and regression coefficients w ((1+num_features)*target_dims)
 #returns fraction of mean square error and variance of target prediction separately for each target dimension
 def test_lin_reg(X, Y, w):
+    print(w.shape)
+    print(X.shape)
+    print(Y.shape)
+    num_samples = X.shape[0]
+
+    mse = np.square(np.subtract(Y, np.dot(X,w))).mean()
+    var = np.dot(np.transpose((Y - np.dot(X, w))),(Y-np.dot(X,w)))/num_samples
+
+    var_dim_count = var.shape[0]*var.shape[1]
+
+    mse_list = []
+    for row in var:
+        for column in row:
+            mse_list.append(mse/column)
+
+    return mse_list
+    
+
+
 
 #takes features with bias X (num_samples*(1+num_features)), centers of clusters C (num_clusters*(1+num_features)) and std of RBF sigma
 #returns matrix with scalar product values of features and cluster centers in higher embedding space (num_samples*num_clusters)
 def RBF_embed(X, C, sigma):
+    pass
 
 ############################################################################################################
 #Linear Regression
 ############################################################################################################
 
 def run_lin_reg(X_tr, Y_tr, X_te, Y_te):
-
+    w = lin_reg(X_tr,Y_tr)
+    mse_list = test_lin_reg(X_te,Y_te, w)
     print('MSE/Var linear regression')
+    err = np.average(mse_list)
     print(err)
 
 ############################################################################################################
@@ -78,17 +102,17 @@ def read_data_cls(split):
 # Y must be from {-1, 1}
 #returns gradient with respect to w (num_features)
 def log_llkhd_grad(X, Y, w):
-
+    pass
 #takes features with bias X (num_samples*(1+num_features)), gt Y (num_samples) and current_parameters w (num_features+1)
 # Y must be from {-1, 1}
 #returns log likelihood loss
 def get_loss(X, Y, w):
-
+    pass
 #takes features with bias X (num_samples*(1+num_features)), gt Y (num_samples) and current_parameters w (num_features+1)
 # Y must be from {-1, 1}
 #returns accuracy
 def get_accuracy(X, Y, w):
-
+    pass
 ####################################################################################################################################
 #Classification
 ####################################################################################################################################
