@@ -15,7 +15,11 @@ def read_data_reg(filename):
 #takes features with bias X (num_samples*(1+num_features)) and target values Y (num_samples*target_dims)
 #returns regression coefficients w ((1+num_features)*target_dims)
 def lin_reg(X, Y):
-    return np.dot(np.transpose(np.dot(inv(np.dot(X,np.transpose(X))),X)), Y)
+    xTx = np.dot(X.T,X)
+    inverse_xTx = inv(xTx)
+    xTy = np.dot(X.T, Y)
+    w = np.dot(inverse_xTx, xTy)
+    return w
     
 
 #takes features with bias X (num_samples*(1+num_features)), target Y (num_samples*target_dims) and regression coefficients w ((1+num_features)*target_dims)
@@ -26,17 +30,20 @@ def test_lin_reg(X, Y, w):
     print(Y.shape)
     num_samples = X.shape[0]
 
-    mse = np.square(np.subtract(Y, np.dot(X,w))).mean()
-    var = np.dot(np.transpose((Y - np.dot(X, w))),(Y-np.dot(X,w)))/num_samples
+    mse = 1/num_samples*np.square(np.subtract(Y, np.dot(X,w))).mean()
+    total_variance = np.var(np.dot(X,w), axis=0)
+    # var = np.dot((Y - np.dot(X, w)).T,(Y-np.dot(X,w)))/num_samples
+    print(mse)
+    print(total_variance)
+    return mse/total_variance
+    # var_dim_count = var.shape[0]*var.shape[1]
 
-    var_dim_count = var.shape[0]*var.shape[1]
+    # mse_list = []
+    # for row in var:
+    #     for column in row:
+    #         mse_list.append(mse/column)
 
-    mse_list = []
-    for row in var:
-        for column in row:
-            mse_list.append(mse/column)
-
-    return mse_list
+    # return mse_list
     
 
 
@@ -52,9 +59,9 @@ def RBF_embed(X, C, sigma):
 
 def run_lin_reg(X_tr, Y_tr, X_te, Y_te):
     w = lin_reg(X_tr,Y_tr)
-    mse_list = test_lin_reg(X_te,Y_te, w)
+    frac_mse_var = test_lin_reg(X_te,Y_te, w)
     print('MSE/Var linear regression')
-    err = np.average(mse_list)
+    err = frac_mse_var
     print(err)
 
 ############################################################################################################
