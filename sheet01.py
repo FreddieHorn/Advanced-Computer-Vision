@@ -29,7 +29,6 @@ def test_lin_reg(X, Y, w):
     print(X.shape)
     print(Y.shape)
     num_samples = X.shape[0]
-
     mse = 1/num_samples*np.square(np.subtract(Y, np.dot(X,w))).mean()
     total_variance = np.var(np.dot(X,w), axis=0)
     # var = np.dot((Y - np.dot(X, w)).T,(Y-np.dot(X,w)))/num_samples
@@ -51,7 +50,11 @@ def test_lin_reg(X, Y, w):
 #takes features with bias X (num_samples*(1+num_features)), centers of clusters C (num_clusters*(1+num_features)) and std of RBF sigma
 #returns matrix with scalar product values of features and cluster centers in higher embedding space (num_samples*num_clusters)
 def RBF_embed(X, C, sigma):
-    pass
+    L = X - C
+    M = sigma
+    kxx = np.exp(np.power(L/M,2))
+    #kxx = np.exp(np.dot(X - C,(X-C).T)/(2*np.power(sigma,2)))
+    return kxx
 
 ############################################################################################################
 #Linear Regression
@@ -71,6 +74,7 @@ def run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list):
     for sigma_pow in range(-5, 3):
         sigma = np.power(3.0, sigma_pow)
         print('MSE/Var dual regression for val sigma='+str(sigma))
+        err_dual = 0
         print(err_dual)
 
     print('MSE/Var dual regression for test sigma='+str(opt_sigma))
@@ -82,8 +86,14 @@ def run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list):
 def run_non_lin_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list):
     
     for num_clusters in [10, 30, 100]:
-        for sigma_pow in range(-5, 3):
+        for sigma_pow in range(1, 3):
             sigma = np.power(3.0, sigma_pow)
+            kxx = RBF_embed(X_tr, num_clusters, sigma)
+            kxx_dot_inv = inv(np.dot(kxx.T, kxx))
+            kxx_inv_dot = np.dot(kxx_dot_inv, kxx.T)
+            kxx_dot_y = np.dot(kxx_inv_dot, y)
+
+            w = np.dot(np.dot(inv(np.dot(kxx.T, kxx)), kxx.T), Y_tr)
             print('MSE/Var non linear regression for val sigma='+str(sigma)+' val num_clusters='+str(num_clusters))
             print(err_dual)
 
@@ -145,7 +155,8 @@ def main():
     tr_list = list(range(0, int(X_tr.shape[0]/2)))
     val_list = list(range(int(X_tr.shape[0]/2), X_tr.shape[0]))
 
-    run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
+
+    #run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
     run_non_lin_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
 
     step_size = 1.0
