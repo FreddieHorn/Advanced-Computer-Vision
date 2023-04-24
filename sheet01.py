@@ -70,14 +70,36 @@ def run_lin_reg(X_tr, Y_tr, X_te, Y_te):
 ############################################################################################################
 #Dual Regression
 ############################################################################################################
+
+def test_dual_reg(X,Y,w):
+    num_samples = X.shape[0]
+    mse = 1/num_samples*np.square(np.subtract(Y, np.dot(X,w))).mean()
+    total_variance = np.var(np.dot(X,w), axis=0)
+    return mse/total_variance
+
 def run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list):
+
+    min_err = 10000000
+    opt_sigma = 0
+    opt_w = 0
     for sigma_pow in range(-5, 3):
         sigma = np.power(3.0, sigma_pow)
+        xTx = np.dot(X_tr,X_tr.T)
+        idnetity_mat = sigma * np.identity(xTx.shape[0]) #xTx has shape (511,511) so it doesnt matter which shape is chosen for length here
+        inverse_xTx = inv(xTx + idnetity_mat)
+        psi = np.dot(inverse_xTx.T, Y_tr) # following the equation at slide 12 and https://jack.valmadre.net/notes/2014/09/03/ridge-regression-dual/
+        w = np.dot(X_tr.T, psi)
+
         print('MSE/Var dual regression for val sigma='+str(sigma))
-        err_dual = 0
+        err_dual = test_dual_reg(X_tr,Y_tr, w)
+        if err_dual.mean() < min_err:
+            min_err = err_dual.mean()
+            opt_sigma = sigma
+            opt_w = w
         print(err_dual)
 
     print('MSE/Var dual regression for test sigma='+str(opt_sigma))
+    err_dual = test_dual_reg(X_te,Y_te, opt_w)
     print(err_dual)
 
 ############################################################################################################
@@ -156,8 +178,8 @@ def main():
     val_list = list(range(int(X_tr.shape[0]/2), X_tr.shape[0]))
 
 
-    #run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
-    run_non_lin_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
+    run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
+    #run_non_lin_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
 
     step_size = 1.0
     Y_tr, X_tr = read_data_cls('test')
