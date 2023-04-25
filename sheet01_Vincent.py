@@ -249,11 +249,17 @@ def get_accuracy(X, Y, w):
 ####################################################################################################################################
 def run_classification(X_tr, Y_tr, X_te, Y_te, step_size):
 
-    # SOMETHING is wrong but I can't find the error. there is no improvement in training at all.
+    
+    # SOMETHING is wrong but I can't find the error. OR the data is just not separable at all by just one hyperplane.
+    # There is no improvement in training at all.
+    # Are we supposed to do something else??
 
     # insert 1 for each data point for the bias
     X_tr = np.hstack((np.ones((X_tr.shape[0],1)), X_tr))
     X_te = np.hstack((np.ones((X_te.shape[0],1)), X_te))
+
+
+
 
     # normalize data
     for i in range(X_tr.shape[0]):
@@ -271,8 +277,8 @@ def run_classification(X_tr, Y_tr, X_te, Y_te, step_size):
     losses = []
     for step in range(max_iter):
         if step%100 == 0:
-            accuracy = get_accuracy(X_tr, Y_tr, w)
-            loss = get_loss(X_tr, Y_tr, w)
+            accuracy = get_accuracy(X_te, Y_te, w)
+            loss = get_loss(X_te, Y_te, w)
             accuracies.append(accuracy)
             losses.append(loss)
             # print('step='+str(step)+' loss='+str(loss)+' accuracy='+str(accuracy))
@@ -284,7 +290,7 @@ def run_classification(X_tr, Y_tr, X_te, Y_te, step_size):
         S = 1/(1 + np.exp(-A)) # send the activations through the sigmoid function
         gradient = - X_tr.T@(S - Y_tr) # this efficiently implements the derivative of the log-likelihood
 
-        w = w + step_size * gradient
+        w = w + 0.001* step_size * gradient
 
         # I also tried stochastic gradient descent...
         # rand_i = np.random.choice(X_tr.shape[0])
@@ -345,13 +351,13 @@ def main():
     # Y_te = Y[:len_test]
     ########################################################
 
-    # run_lin_reg(X_tr, Y_tr, X_te, Y_te)
+    run_lin_reg(X_tr, Y_tr, X_te, Y_te)
 
-    # tr_list = list(range(0, int(X_tr.shape[0]/2)))
-    # val_list = list(range(int(X_tr.shape[0]/2), X_tr.shape[0]))
+    tr_list = list(range(0, int(X_tr.shape[0]/2)))
+    val_list = list(range(int(X_tr.shape[0]/2), X_tr.shape[0]))
 
-    # run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
-    # run_non_lin_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
+    run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
+    run_non_lin_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
 
 
     # Exercise 2
