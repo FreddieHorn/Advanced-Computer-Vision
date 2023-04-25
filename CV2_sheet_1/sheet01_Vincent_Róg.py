@@ -262,10 +262,10 @@ def run_classification(X_tr, Y_tr, X_te, Y_te, step_size):
 
 
     # normalize data
-    for i in range(X_tr.shape[0]):
-        X_tr[i,:] = (X_tr[i,:] - np.mean(X_tr[i,:]))/np.std(X_tr[i,:])
-    for i in range(X_te.shape[0]):
-        X_te[i,:] = (X_te[i,:] - np.mean(X_te[i,:]))/np.std(X_te[i,:])
+    # for i in range(X_tr.shape[0]):
+    #     X_tr[i,:] = (X_tr[i,:] - np.mean(X_tr[i,:]))/   np.std(X_tr[i,:])
+    # for i in range(X_te.shape[0]):
+    #     X_te[i,:] = (X_te[i,:] - np.mean(X_te[i,:]))/np.std(X_te[i,:])
 
 
     w = np.random.normal(0, scale=1, size=(X_tr.shape[1]))
@@ -302,7 +302,7 @@ def run_classification(X_tr, Y_tr, X_te, Y_te, step_size):
         # w = w + 0.1*step_size * sample_gradient
 
         
-    accuracy = get_accuracy(X_te, Y_te, w)
+    accuracy = get_accuracy(X_tr, Y_tr, w)
     loss = get_loss(X_te, Y_te, w)
     print('test set loss='+str(loss)+' accuracy='+str(accuracy))
 
@@ -332,7 +332,6 @@ def main():
     
     Y_tr, X_tr = read_data_reg('data/regression_train.txt')
     Y_te, X_te = read_data_reg('data/regression_test.txt')
-
     ########################################################
     # #optional shuffling
     # from sklearn.utils import shuffle
@@ -355,11 +354,15 @@ def main():
 
     tr_list = list(range(0, int(X_tr.shape[0]/2)))
     val_list = list(range(int(X_tr.shape[0]/2), X_tr.shape[0]))
+    tr_list = list(range(0, int(X_tr.shape[0]/2)))
+    val_list = list(range(int(X_tr.shape[0]/2), X_tr.shape[0]))
 
     run_dual_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
     run_non_lin_reg(X_tr, Y_tr, X_te, Y_te, tr_list, val_list)
 
+    import warnings
 
+    #suppress warnings
     # Exercise 2
 
     step_size = 1.0
