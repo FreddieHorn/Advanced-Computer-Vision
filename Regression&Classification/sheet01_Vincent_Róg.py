@@ -330,8 +330,8 @@ def main():
     ####################################################################################################################################
     ## Exercise 1
     
-    Y_tr, X_tr = read_data_reg('data/regression_train.txt')
-    Y_te, X_te = read_data_reg('data/regression_test.txt')
+    Y_tr, X_tr = read_data_reg('./data/regression_train.txt')
+    Y_te, X_te = read_data_reg('./data/regression_test.txt')
     ########################################################
     # #optional shuffling
     # from sklearn.utils import shuffle
