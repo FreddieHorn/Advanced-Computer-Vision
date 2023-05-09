@@ -24,34 +24,90 @@ class DecisionTree:
     # provide your implementation
     # should return a trained tree with provided tree param
     def train(self):
-        pass
+        self.nodes = [Node()] #root node
+        current_depth = 0
+        current_node_id = 0
+        current_ids = np.arange(len(self.labels))
+
+        while current_depth < self.depth:
+            current_node = self.nodes[current_node_id]
+            left_ids, right_ids, feature = self.best_split(current_ids)
+
+            if len(left_ids) < self.minimum_samples_at_leaf or len(right_ids) < self.minimum_samples_at_leaf:
+                current_node.type = 'leaf'
+                current_node.probabilities = [np.sum(self.labels == i) / len(current_ids) for i in self.classes]
+            else:
+                current_node.type = 'split'
+                current_node.leftChild = len(self.nodes)
+                self.nodes.append(Node())
+                current_node.rightChild = len(self.nodes)
+                self.nodes.append(Node())
+                current_node.feature = feature
+
+                left_node = self.nodes[current_node.leftChild]
+                left_node.create_leafNode(self.labels[left_ids], self.classes)
+
+                right_node = self.nodes[current_node.rightChild]
+                right_node.create_leafNode(self.labels[right_ids], self.classes)
+
+                current_node_id += 1
+                current_depth = np.ceil(np.log2(current_node_id + 1)).astype(int)
+                current_ids = right_ids
+
 
     # Function to predict probabilities for single image
     # provide your implementation
     # should return predicted class distribution in the test image
     def predict(self, image):
-        pass
+        current_node_id = 0
+        current_node = self.nodes[current_node_id]
+
+        while current_node.type != 'leaf':
+            feature_response = self.getFeatureResponse(image, current_node.feature)
+            if self.getsplit(feature_response, current_node.feature['th']):
+                current_node_id = current_node.leftChild
+            else:
+                current_node_id = current_node.rightChild
+
+            current_node = self.nodes[current_node_id]
+
+        return current_node.probabilities
 
     # Function to get feature response for a random color and random locations
     # provide your implementation
     # should return feature response for the image
     def getFeatureResponse(self, images, feature):
-        color, q1, q2 = feature
-        integral_img = self.integral_image(images)
-        return None
+        q1 = feature[0]
+        q2 = feature[1]
+        color_channel = feature[3]
+        imgs_one_channel = images[:,:,:,color_channel]
+        patch_size = feature[2]
+        integral_images = self.integral_multiple_image(imgs_one_channel)
+
+        features = self.patch_multiple_average(integral_images, q1[0], q1[1], patch_size)\
+              - self.patch_multiple_average(integral_images, q2[0], q2[1], patch_size)
+        # for i, img in enumerate(integral_images):
+        #     # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        #     patch = img[loc1[1]-patch_size//2:loc1[1]+patch_size//2+1,
+        #                 loc1[0]-patch_size//2:loc1[0]+patch_size//2+1]
+        #     patch = patch[:, :, color_channel]
+        #     mean1 = np.mean(patch)
+        #     patch = img[loc2[1]-patch_size//2:loc2[1]+patch_size//2+1,
+        #                 loc2[0]-patch_size//2:loc2[0]+patch_size//2+1]
+        #     patch = patch[:, :, color_channel]
+        #     mean2 = np.mean(patch)
+        #     feature_response = (mean1 - mean2)/255.0
+        #     features.append(feature_response)
+        return np.asarray(features)
 
 
     # Function to get left/right split given feature responses and a threshold
     # provide your implementation
     # should return left/right split
-    def getsplit(self, responses, threshold, ids):
-        q1, q2, s, c = responses
-        X = self.samples[ids]
-        integral = self.integral_image(X[:,:,c])
-        idx1 = (self.patch_multiple_average(X, q1[0], q1[1], s) - self.patch_multiple_average(X, q2[0], q2[1], s) <= threshold)
-        idx2 = np.logical_not(idx1)
-
-        return idx1, idx2 #left/right split
+    def getsplit(self, responses, threshold):
+        left_ids = np.where(responses < threshold)[0]
+        right_ids = np.where(responses >= threshold)[0]
+        return left_ids, right_ids
 
 
     # Function to compute entropy over incoming class labels
@@ -75,9 +131,6 @@ class DecisionTree:
     def best_split(self, ids):
         Y = self.labels[ids]
 
-        m = Y.size
-        if m <= 1:
-            return None, None
         best_ig = -1
         # best_idx, best_thr = None, None
         for _ in range(self.num_pixel_locations):
@@ -91,7 +144,8 @@ class DecisionTree:
                                         np.random.randint(low=0, high=self.samples.shape[1]))
                         q1 = (x1,y1)
                         q2 = (x2,y2)
-                        left, right = self.getsplit((q1,q2,s,c), tau, ids)
+                        responses = self.getFeatureResponse(self.samples, (q1,q2,s,c))
+                        left, right = self.getsplit(responses, tau)
                         ent_left = self.compute_entropy(left)
                         ent_right = self.compute_entropy(right)
                         ent_all = self.compute_entropy(ids)
@@ -106,8 +160,6 @@ class DecisionTree:
                             right_split = right
 
         return left_split, right_split, feature
-
-
 
 
 
