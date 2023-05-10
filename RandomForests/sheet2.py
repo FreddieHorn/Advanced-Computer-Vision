@@ -1,4 +1,5 @@
 from RandomForest import Forest
+from Tree import DecisionTree
 import matplotlib.pyplot as plt
 import json
 import cv2
@@ -47,6 +48,8 @@ def extract_img_data(data_dict, DIR, size):
             print(str(e))
     return X, np.array(Y_labels)
 
+
+
 def main():
     # provide your implementation for the sheet 2 here
     print('Get current working directory : ', os.getcwd())
@@ -55,6 +58,19 @@ def main():
     X_train, Y_train = extract_img_data(train_dict, "RandomForests/images/images/train/", train_size)
     X_test, Y_test = extract_img_data(test_dict, "RandomForests/images/images/test/", test_size)
 
-    x = 2
+    # Task 2
+
+    tree = DecisionTree(4, X_train, Y_train, 
+                        tree_param = {'depth': 5,
+                         'random_color_values': 10,
+                         'num_pixel_locations': 100,
+                         'num_patch_sizes': 5,
+                         'num_thresholds': 20,
+                         'minimum_samples_at_leaf': 4, #  was not specified in task
+                         },
+                         mode = 'train')
+    tree.train()
+
+
 if __name__ == "__main__":
     main()
