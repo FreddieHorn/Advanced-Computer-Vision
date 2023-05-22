@@ -1,32 +1,32 @@
 import numpy as np
 
 class Node:
-    def __init__(self):
-
+    def __init__(self, training_image_ids):
+        self.depth = 0
         self.type = 'None'
-        self.leftChild = -1
-        self.rightChild = -1
-        self.feature = {'color': -1, 'location1': -1, 'location2': -1, 'patch_size':-1, 'th': -1}
+        self.leftChild = None
+        self.rightChild = None
+        self.feature = None
         self.probabilities = []
+        self.training_image_ids = training_image_ids # all images used to train this node
 
     # Function to create a new split node
-    # provide your implementation
-    def create_SplitNode(self, leftchild, rightchild, feature):
-        node = Node()
-        node.type = 'split'
-        node.leftChild = leftchild
-        node.rightChild = rightchild
-        node.feature = feature
-        return node
+    def set_as_SplitNode(self, leftchild, rightchild, feature):
+        self.type = "split"
+        self.leftChild = leftchild
+        self.rightChild = rightchild
+        self.feature = feature
+
+        self.leftChild.depth = self.depth + 1
+        self.rightChild.depth = self.depth + 1
 
     # Function to create a new leaf node
-    # provide your implementation
-    def create_leafNode(self, labels, classes):
-        node = Node()
-        node.type = 'leaf'
-        node.probabilities = []
-        for c in classes:
-            node.probabilities.append(np.sum(labels == c) / len(labels))
-        return node
+    def set_as_leafNode(self, labels, classes):
+        
+        self.type = "leaf"
+        p_i = np.array([np.sum(np.where(labels == i, 1, 0)) for i in classes]).astype(float)
+        p_i /= len(labels)
+        self.probabilities = p_i
 
-    # feel free to add any helper functions
+        print("new leaf has ", len(labels), " labels with distribution ", str(p_i), "!")
+
