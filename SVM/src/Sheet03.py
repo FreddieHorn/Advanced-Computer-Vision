@@ -122,14 +122,15 @@ def task1_1():
     img_pos_list = read_txt_file(filelist_train_pos)
     img_neg_list = read_txt_file(filelist_train_neg)
 
-    X_train_pos, Y_train_pos = extract_img_data(img_pos_list, path_test+"/pos/", positive=True)
+    X_train_pos, Y_train_pos = extract_img_data(img_pos_list, path_test+"/pos/", positive=True) 
     X_train_neg, Y_train_neg = extract_img_data(img_neg_list, path_test+"/neg/", positive=False)
 
-    X_train = np.append(X_train_pos, X_train_neg) #order of elements is maintained 
-    Y_train = np.append(Y_train_pos, Y_train_neg)
+    #okay only X_train_pos and X_train_neg samples are needed for SVM training
+    # X_train = np.append(X_train_pos, X_train_neg) #order of elements is maintained 
+    # Y_train = np.append(Y_train_pos, Y_train_neg)
 
-    idx = np.random.permutation(len(X_train)) #shuffling the data
-    X_train,Y_train = X_train[idx], Y_train[idx]
+    # idx = np.random.permutation(len(X_train)) #shuffling the data
+    # X_train,Y_train = X_train[idx], Y_train[idx]
     
 
 def task1_2(): 
