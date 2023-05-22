@@ -9,6 +9,15 @@ import os
 WIDTH = 64
 HEIGHT = 128
 
+win_size = (WIDTH, HEIGHT)
+block_size = (16, 16)
+block_stride = (8, 8)
+cell_size = (8, 8)
+num_bins = 9
+
+hog = cv.HOGDescriptor(win_size, block_size, block_stride,
+                        cell_size, num_bins)
+
 num_negative_samples = 10 # number of negative samples per image
 train_hog_path = 'train_hog_descs' # the file to which you save the HOG descriptors of every patch
 
@@ -46,7 +55,9 @@ def extract_img_data(img_list, DIR, positive): #sample_type is either 1 - positi
                 x = center[1]/2 - WIDTH/2
                 y = center[0]/2 - HEIGHT/2
                 crop_img = img[int(y):int(y+HEIGHT), int(x):int(x+WIDTH), :]
-                X.append(np.array(crop_img))
+                
+                X.append(hog.compute(crop_img, (16, 16)))
+                print(i)
             except Exception as e: # catch "broken" images where width or height is 0, therefore cannot be resized. 
                 print(str(e))
         Y_labels = np.ones(len(X))
@@ -86,7 +97,7 @@ def extract_patches(image, num_patches=10, patch_size=(128, 64)):
                 # Extract the patch from each channel
                 patch = image[top:bottom, left:right, :]
 
-                patches.append(patch)
+                patches.append(hog.compute(patch, (16, 16)))
                 valid_patch = True
 
     return patches
