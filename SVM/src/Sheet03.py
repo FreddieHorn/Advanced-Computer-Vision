@@ -2,7 +2,9 @@ import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-
+from SVM import support_vector_machine
+from sklearn.metrics import classification_report, accuracy_score
+from sklearn import svm
 # Global constants
 
 # crop/patch dimensions for the training samples
@@ -72,8 +74,8 @@ def extract_img_data(img_list, DIR, positive): #sample_type is either 1 - positi
                 X.extend(patches)
             except Exception as e: # catch "broken" images where width or height is 0, therefore cannot be resized. 
                 print(str(e))
-            Y_labels = np.zeros(len(X))
-            return np.array(X), Y_labels
+        Y_labels = np.zeros(len(X))
+        return np.array(X), Y_labels
 
 
 def extract_patches(image, num_patches=10, patch_size=(128, 64)):
@@ -102,6 +104,27 @@ def extract_patches(image, num_patches=10, patch_size=(128, 64)):
 
     return patches
 
+def RBF_embed(X, C, sigma):
+    Z = np.zeros((X.shape[0], C.shape[0]))
+
+    # # for each row of X and each row of C, calculate the RBF similarity
+    # for i, x_i in enumerate(X):
+    #     for j, c in enumerate(C):
+    #         Z[i,j] = np.exp(-np.dot(x_i-c, x_i-c)/sigma**2)
+
+
+    # write in matrix multiplication by broadcasting:
+    # broadcast C and X to be of a common shape (num_samples, num_clusters, num_features)
+    # meaning X is broadcasted along the cluster-axis and C is broadcasted along the sample-axis
+    # so all cluster vectors will be substracted from all sample vectors
+    # and after that map each of these vectors to its squared norm (<=>dot product), rest are element wise operations
+    Z = np.exp(-((np.linalg.norm(X[:, np.newaxis, :] - C[np.newaxis,:,:], axis=2)**2)/(sigma**2)))
+
+    # I measured performance and found that the broadcasting method was (only) about twice as fast as the explicit looping
+
+    return Z
+
+
 def task1_1():
 
       # TODO: Create a HOG descriptor object to extract the features from the set of positive and negative samples 
@@ -122,16 +145,44 @@ def task1_1():
     img_pos_list = read_txt_file(filelist_train_pos)
     img_neg_list = read_txt_file(filelist_train_neg)
 
-    X_train_pos, Y_train_pos = extract_img_data(img_pos_list, path_test+"/pos/", positive=True) 
-    X_train_neg, Y_train_neg = extract_img_data(img_neg_list, path_test+"/neg/", positive=False)
+    X_train_pos, Y_train_pos = extract_img_data(img_pos_list, path_train+"/pos/", positive=True) 
+    X_train_neg, Y_train_neg = extract_img_data(img_neg_list, path_train+"/neg/", positive=False)
 
-    #okay only X_train_pos and X_train_neg samples are needed for SVM training
-    # X_train = np.append(X_train_pos, X_train_neg) #order of elements is maintained 
-    # Y_train = np.append(Y_train_pos, Y_train_neg)
+    X_test_pos, Y_test_pos = extract_img_data(img_pos_list, path_test+"/pos/", positive=True) 
+    X_test_neg, Y_test_neg = extract_img_data(img_neg_list, path_test+"/neg/", positive=False)
 
-    # idx = np.random.permutation(len(X_train)) #shuffling the data
-    # X_train,Y_train = X_train[idx], Y_train[idx]
-    
+  #  X_train_pos, Y_train_pos = X_train_neg[:200,:], Y_train_neg[:200] # my computer cannot handle big training data
+  #  X_train_neg, Y_train_neg = X_train_neg[:600,:], Y_train_neg[:600] # my computer cannot handle big training data
+    # okay only X_train_pos and X_train_neg samples are needed for SVM training
+    X_train = np.append(X_train_pos, X_train_neg, axis=0) #order of elements is maintained 
+    Y_train = np.append(Y_train_pos, Y_train_neg, axis=0)
+
+
+ #   X_test_pos, Y_test_pos = X_test_neg[:100,:], Y_train_neg[:100] # my computer cannot handle big training data
+  #  X_test_neg, Y_test_neg = X_test_neg[:500,:], Y_train_neg[:500] # my computer cannot handle big training data
+
+    X_test = np.append(X_test_pos, X_test_neg, axis=0) #order of elements is maintained 
+    Y_test = np.append(Y_test_pos, Y_test_neg, axis=0)
+
+    del X_train_pos
+    del Y_train_pos
+    del X_train_neg
+    del Y_train_neg
+    del X_test_pos
+    del Y_test_pos
+    del X_test_neg
+    del Y_test_neg
+
+    idx = np.random.permutation(len(X_train)) #shuffling the data
+    X_train, Y_train = X_train[idx], Y_train[idx]
+
+    svma = svm.SVC()
+    # svm = support_vector_machine(features = X_train.shape[1],kernel="gaussian")
+    svma.fit(X_train, Y_train)
+
+    y_pred = svma.predict(X_test)
+
+    print("Accuracy: "+str(accuracy_score(Y_test, y_pred)))
 
 def task1_2(): 
     print('Task 1.2 - Train SVM and predict confidence values')
