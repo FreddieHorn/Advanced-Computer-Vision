@@ -5,6 +5,7 @@ import os
 from SVM import support_vector_machine
 from sklearn.metrics import classification_report, accuracy_score
 from sklearn import svm
+from sklearn.metrics import PrecisionRecallDisplay
 # Global constants
 
 # crop/patch dimensions for the training samples
@@ -176,23 +177,71 @@ def task1_1():
     idx = np.random.permutation(len(X_train)) #shuffling the data
     X_train, Y_train = X_train[idx], Y_train[idx]
 
-    svma = svm.SVC()
-    # svm = support_vector_machine(features = X_train.shape[1],kernel="gaussian")
-    svma.fit(X_train, Y_train)
+    # svma = svm.SVC() #any other svm that this is making my computer explode
+    # # svm = support_vector_machine(features = X_train.shape[1],kernel="gaussian")
+    # svma.fit(X_train, Y_train)
 
-    y_pred = svma.predict(X_test)
+    # y_pred = svma.predict(X_test)
 
-    print("Accuracy: "+str(accuracy_score(Y_test, y_pred)))
+    idx = np.random.permutation(len(X_test)) #shuffling the data
+    X_test, Y_test = X_test[idx], Y_test[idx]
 
-def task1_2(): 
+    # print("Accuracy: "+str(accuracy_score(Y_test, y_pred)))
+    return X_train, Y_train, X_test, Y_test
+
+def task1_2(X_train, Y_train, X_test, C_list = [1]): 
     print('Task 1.2 - Train SVM and predict confidence values')
       #Create 3 SVMs with different C values, train them with the training data and save them
       # then use them to classify the test images and save the results
 
+    pred_list = []
+
+    for C in C_list:
+        svma = svm.SVC(C=C)
+        # svm = support_vector_machine(features = X_train.shape[1],kernel="gaussian")
+        svma.fit(X_train, Y_train)
+        y_pred = svma.predict(X_test)
+        pred_list.append(y_pred)
+        print(f"Accuracy for {C}: "+str(accuracy_score(Y_test, y_pred)))
+
+    return pred_list
+
 
 # plotting precision recall
-def task1_3():
-    pass
+def task1_3(pred_list, Y_test, C_list):
+
+    # precisions = []
+    # recalls = []
+    # for pred_labels in pred_list:
+    # #print("Accuracy: "+str(accuracy_score(Y_test, y_pred)))
+    #     TP = np.sum(np.logical_and(pred_labels == 1, Y_test == 1))
+    
+    #     # True Negative (TN): we predict a label of 0 (negative), and the true label is 0.
+    #     TN = np.sum(np.logical_and(pred_labels == 0, Y_test == 0))
+
+    #     # False Positive (FP): we predict a label of 1 (positive), but the true label is 0.
+    #     FP = np.sum(np.logical_and(pred_labels == 1, Y_test == 0))
+        
+    #     # False Negative (FN): we predict a label of 0 (negative), but the true label is 1.
+    #     FN = np.sum(np.logical_and(pred_labels == 0, Y_test == 1))
+
+    #     precisions.append(TP/(FP+TP))
+    #     recalls.append(TP/(FN+TP))
+
+    #     print(f"precision = {TP/(FP+TP)}")
+    #     print(f"recall = {TP/(FN+TP)}")
+    for pred_labels, C in zip(pred_list,C_list):
+        display = PrecisionRecallDisplay.from_predictions(Y_test, pred_labels, name=f"SVM: C = {C}")
+        _ = display.ax_.set_title("2-class Precision-Recall curve")
+        plt.show()
+
+    # plt.scatter(precisions, recalls)
+    # plt.xlabel("Precision")
+    # plt.ylabel("Recall")
+    # plt.title(f"Precision-recall plot with C = [0.01, 1, 100]")
+    # for i, C in enumerate(C_list):
+    #     plt.annotate(f"C = {C}", (precisions[i], recalls[i]))
+    # plt.show()
 
 
 
@@ -201,9 +250,9 @@ def task1_3():
 if __name__ == "__main__":
 
     # Task 1,2,3 
-    task1_1()
-    trained_svm = task1_2()
-    task1_3()
+    X_train, Y_train, X_test, Y_test = task1_1()
+    pred_list = task1_2(X_train, Y_train, X_test, C_list=[0.01, 1, 100])
+    task1_3(pred_list, Y_test, C_list = [0.01, 1, 100])
 
     # Task 4
     pass
