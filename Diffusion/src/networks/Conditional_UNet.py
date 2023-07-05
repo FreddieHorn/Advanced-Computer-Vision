@@ -15,17 +15,33 @@ class ConvBlock(nn.Module):
             out_channels : int
                 number of output channels
         """
+        self.subblock1 = nn.Sequential(
+            nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.GELU()
+        )
+        self.subblock2 = nn.Sequential(
+            nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(out_channels),
+            nn.GELU()
+        )
 
-        #--- YOUR CODE HERE ---#
-        # TODO
+        # If same channel dimension, we'll use the residual connection from the original input.
+        # If not, then we'll have a residual connection from the first subblock.
+        self.in_out_channels_equal = in_channels == out_channels
+
+
 
     def forward(self, x: torch.Tensor):
-        """
-            x : tensor [N, C, H, W]
-        """
+        out1 = self.subblock1(x)
+        out = self.subblock2(out1)
 
-        # --- YOUR CODE HERE ---#
-        # TODO
+        if self.in_out_channels_equal:
+            out += x
+        else:
+            out += out1
+        
+        out /= torch.sqrt(torch.tensor(2)) # Normalize by sqrt(2) (Why?)
         return out
 
 
@@ -42,15 +58,17 @@ class Encoder_Block(nn.Module):
             out_channels : int
                 number of output channels
         """
+        self.sequential = nn.Sequential(
+            ConvBlock(in_channels=in_channels, out_channels=out_channels),
+            ConvBlock(in_channels=out_channels, out_channels=out_channels),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
 
     def forward(self, x: torch.Tensor):
         """
             x : tensor [N, C, H, W]
         """
-        # --- YOUR CODE HERE ---#
-        # TODO
-
-        return x
+        return self.sequential(x)
 
 
 class Decoder_Block(nn.Module):
@@ -69,8 +87,12 @@ class Decoder_Block(nn.Module):
                 kernel size and stride for upsampling    
         """
 
-        # --- YOUR CODE HERE ---#
-        # TODO
+        self.sequential = nn.Sequential(
+            nn.ConvTranspose2d(in_channels=in_channels, out_channels=out_channels, kernel_size=transpose, stride=transpose),
+            ConvBlock(in_channels=out_channels, out_channels=out_channels),
+            ConvBlock(in_channels=out_channels, out_channels=out_channels)
+        )
+
 
     def forward(self, x: torch.Tensor, x_skip: torch.Tensor):
         """
@@ -78,10 +100,11 @@ class Decoder_Block(nn.Module):
             x_skip : tensor from corresponding encoder layer via a skip connection [N, C, H, W]
         """
 
-        # --- YOUR CODE HERE ---#
-        # TODO
-
-        return x
+        if x_skip != None:
+            x = torch.cat([x, x_skip], dim=1)
+        out = self.sequential(x)
+    
+        return out
 
 
 class Embedding_Block(nn.Module):
@@ -100,9 +123,18 @@ class Embedding_Block(nn.Module):
             activation : str
                 activation, could be sin or GELU
         """
+        self.in_channels = in_channels
 
-        # --- YOUR CODE HERE ---#
-        # TODO
+        self.linear1 = nn.Linear(in_features=in_channels, out_features=out_channels)
+        if activation == "sin":
+            self.activation = torch.sin
+        elif activation == "GELU":
+            self.activation = nn.GELU()
+        else:
+            print("Error. Wrong embedding activation type given")
+
+        self.linear2 = nn.Linear(in_features=out_channels, out_features=out_channels)
+
 
     def forward(self, x: torch.Tensor):
         """
@@ -112,10 +144,11 @@ class Embedding_Block(nn.Module):
 
         # flatten the input tensor
         x = x.view(-1, self.in_channels)
-        # --- YOUR CODE HERE ---#
-        # TODO
-
-        return x
+        out = self.linear1(x)
+        out = self.activation(out)
+        out = self.linear2(out)
+        out = out.squeeze()
+        return out
 
 
 class UNet(nn.Module):
@@ -136,7 +169,6 @@ class UNet(nn.Module):
                 height of the input image, assuming height == width and dividable by 2 (default is 32)
         """
 
-        self.in_channels = in_channels
         self.n_features = n_features
         self.n_classes = n_classes
         self.height = height
@@ -161,8 +193,11 @@ class UNet(nn.Module):
         self.decoder_block2 = Decoder_Block(2 * n_features, n_features, 2)
 
         # Initialize the final convolutional layers to map to the same number of channels as the input image
-        # --- YOUR CODE HERE ---#
-        # TODO
+        self.final_conv = nn.Sequential( #  I don't know how to set it exactly, so I just try this:
+            nn.Conv2d(2 * n_features, n_features, kernel_size=3, stride=1, padding=1),
+            nn.GroupNorm(8, n_features),
+            nn.Conv2d(n_features, in_channels, kernel_size=3, stride=1, padding=1)
+        )
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, c: torch.Tensor):
         """
@@ -170,18 +205,66 @@ class UNet(nn.Module):
             t : timestep [N, 1, 1, 1]. t should be given as a normalized input by n_timesteps (e.g., t/n_timesteps)
             c : label/class condition [N, n_classes]
         """
+        out_init = self.init_conv(x)
+        out_enc1 = self.encoder_block1(out_init)
+        out_enc2 = self.encoder_block2(out_enc1)
 
-        # --- YOUR CODE HERE ---#
-        # TODO
+        out_hid = self.to_hidden_vec(out_enc2)
+        out_dec0 = self.decoder_block0(out_hid, None)
 
-        return out
+        out_time1 = self.time_embedding1(t)
+        out_class1 = self.class_embedding1(c)
+
+        out_dec0 *= out_class1.unsqueeze(0).unsqueeze(2).unsqueeze(3) # unsqueezing for dimensional match
+        out_dec0 += out_time1.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+
+        out_dec1 = self.decoder_block1(out_dec0, out_enc2)
+
+        out_time2 = self.time_embedding2(t)
+        out_class2 = self.class_embedding2(c)
+
+        out_dec1 *= out_class2.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+        out_dec1 += out_time2.unsqueeze(0).unsqueeze(2).unsqueeze(3)
+
+        out_dec2 = self.decoder_block2(out_dec1, out_enc1)
+
+        out_final = self.final_conv(torch.cat([out_init, out_dec2], dim=1))
+
+
+        return out_final
 
 
 if __name__ == '__main__':
 
-    print()
-    # check the implementation
-    # --- YOUR CODE HERE ---#
-    # TODO
+    x = torch.randn((1, 3, 32, 32))
+    t = torch.randn((1, 1, 1, 1))
+    c = torch.randn((1, 10))
+
+
+    # Test for both GPU (if available) and cpu
+
+    devices = [torch.device("cpu")]
+
+    if torch.cuda.is_available():
+        devices.append(torch.device("cuda"))
+    else:
+        print("no cuda available")
+
+    for device in devices:
+        x = x.to(device)
+        t = t.to(device)
+        c = c.to(device)
+
+        model = UNet(in_channels=3, n_features=32, n_classes=10, height=32)
+
+        model = model.to(device)
+
+        test_result = model(x, t, c)
+
+        num_params = sum(p.numel() for p in model.parameters())
+        print("Number of parameters: ", num_params)
+
+    
+
 
 
